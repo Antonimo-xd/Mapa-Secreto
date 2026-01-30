@@ -1,34 +1,53 @@
-# 🗺️ Mapa Secreto (Proyecto)
+# 📍 Mapa Secreto (Proyecto)
 
 ## 1. Visión del Proyecto
+**Mapa Secreto** es una plataforma digital curada y asistida por la comunidad, diseñada para catalogar y visibilizar el vibrante comercio hiperlocal que a menudo no figura en los mapas tradicionales. 
 
-"Mi proyecto es Mapa Secreto, una plataforma curada y asistida por la comunidad para catalogar el comercio local." 
-La aplicación permite a los usuarios ver el mapa interactivo y sugerir nuevas tiendas, puestos o servicios.
-
-Todas las sugerencias pasan por un panel de moderación del administrador para revisar, editar y aprobar el contenido. Esto mantiene la alta calidad de los datos y evita el 'ruido'.
+A diferencia de otros servicios, operamos bajo un **modelo híbrido**: los usuarios sugieren lugares y un administrador modera el contenido para asegurar la calidad y evitar el "ruido".
 
 ## 2. Stack Tecnológico 💻
-
-Este proyecto utiliza una arquitectura desacoplada:
-
+Este proyecto utiliza una arquitectura desacoplada (Headless):
 * **Backend (API):** Django + Django Rest Framework 
-* **Frontend (Web):** React 
+* **Frontend (Web):** React + Leaflet.js
+* **Base de Datos:** PostgreSQL (vía Supabase)
 * **Frontend (Móvil):** React Native (planeado)
-* **Base de Datos:** Supabase (PostgreSQL)
-* **Mapa:** Leaflet.js
 
-## 3. Características Principales
+## 3. Modelo de Datos (DER)
+El siguiente diagrama representa la estructura de nuestra base de datos, optimizada para la geolocalización y la moderación:
 
-* **Mapa Interactivo:** Visualización de tiendas con detalles y fotos.
-* **Filtros:** Búsqueda por categorías y etiquetas (ej: #vegano, #hechoamano).
-* **Modelo Híbrido (Crowdsourcing):** Los usuarios pueden "Sugerir un Lugar", que luego es aprobado por un administrador.
-* **Panel de Administrador:** Herramientas para moderar contenido, gestionar datos y un rastreador visual de exploración.
-* **Gamificación (Futuro):** Ideas para Puntos de Explorador e Insignias.
+```mermaid
+erDiagram
+    USUARIO ||--o{ TIENDA : "sugiere"
+    USUARIO ||--o{ VISITA : "registra"
+    CATEGORIA ||--o{ TIENDA : "clasifica"
 
-## 4. Principios de Calidad y Seguridad
+    USUARIO {
+        uuid id PK
+        string username
+        string email
+    }
 
-Este proyecto se adhiere a las buenas prácticas de la ingeniería de software:
+    CATEGORIA {
+        int id PK
+        string nombre
+        string icono
+    }
 
-* **Seguridad:** Sigue las recomendaciones de OWASP Top 10 y aplica seguridad en capas (HTTPS, Hashing, JWT, etc.).
-* **Calidad:** Implementa pruebas (Unitarias y de Integración), Linters (Flake8, ESLint), y principios de Clean Code (SOLID, DRY).
-* **Legal:** Se operará con una Política de Privacidad y T&C para cumplir con la protección de datos.
+    TIENDA {
+        uuid id PK
+        string nombre
+        string slug
+        decimal latitud
+        decimal longitud
+        string estado_validacion
+        datetime ultima_verificacion
+        int categoria_id FK
+    }
+
+    VISITA {
+        int id PK
+        string calle_segmento
+        string estado_color
+        datetime fecha_visita
+        uuid usuario_id FK
+    }
