@@ -73,7 +73,7 @@ erDiagram
         text comentario
         datetime creado_en
     }
-
+```
 ## 4. Historias de Usuario (MVP)
 
 | Rol | Descripción |
