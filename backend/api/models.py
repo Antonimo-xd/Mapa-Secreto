@@ -41,8 +41,8 @@ class Tienda(models.Model):
     descripcion = models.TextField()
     
     # Geolocalización
-    latitud = models.DecimalField(max_digits=10, decimal_places=8)
-    longitud = models.DecimalField(max_digits=11, decimal_places=8)
+    latitud = models.DecimalField(max_digits=20, decimal_places=16)
+    longitud = models.DecimalField(max_digits=21, decimal_places=16)
     
     # Datos Adicionales
     rango_precios = models.IntegerField(
