@@ -33,12 +33,12 @@ class Categoria(models.Model):
 # 3. Entidad Tienda (El núcleo de Mapa Secreto)
 class Tienda(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, related_name='tiendas')
+    categorias = models.ManyToManyField(Categoria, related_name='tiendas')
     creado_por = models.ForeignKey(Perfil, on_delete=models.SET_NULL, null=True, related_name='tiendas_sugeridas')
     
     nombre = models.CharField(max_length=200)
     slug = models.SlugField(max_length=250, unique=True, blank=True)
-    descripcion = models.TextField()
+    descripcion = models.TextField(blank=True, null=True)
     
     # Geolocalización
     latitud = models.DecimalField(max_digits=20, decimal_places=16)
@@ -50,12 +50,20 @@ class Tienda(models.Model):
         help_text="Escala del 1 al 4"
     )
     
+    direccion = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        verbose_name="Dirección / Pasaje"
+    )
+    
     # PostgreSQL JSONB fields
-    contacto = models.JSONField(default=dict, help_text="Estructura: {'ig': '@...', 'wsp': '...'}")
-    horarios = models.JSONField(default=dict, help_text="Estructura: {'lunes': '09:00-18:00'}")
+    contacto = models.JSONField(blank=True, null=True, default=dict, help_text="Estructura: {'ig': '@...', 'wsp': '...'}")
+    horarios = models.JSONField(blank=True, null=True, default=dict, help_text="Estructura: {'lunes': '09:00-18:00'}")
     
     verificado = models.BooleanField(default=False)
     url_imagen = models.URLField(max_length=500, blank=True, null=True)
+    imagen = models.ImageField(upload_to='tiendas/fotos/', blank=True, null=True)
     calificacion_promedio = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     
     creado_en = models.DateTimeField(auto_now_add=True)
@@ -92,3 +100,24 @@ class Resena(models.Model):
 
     class Meta:
         verbose_name = "Reseña"
+
+# 6. Rutas de Exploración (Tracking de Cobertura)
+class RutaExploracion(models.Model):
+    ESTADOS = (
+        ('verde', 'Completado (Todas las tiendas anotadas)'),
+        ('amarillo', 'Incompleto (Faltan tiendas por anotar)'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nombre = models.CharField(max_length=150, help_text="Ej: Avenida del Mar - Tramo 1")
+    
+    # Aquí guardaremos una lista de coordenadas para dibujar la línea
+    # Ej: [[-29.902, -71.252], [-29.905, -71.255]]
+    coordenadas = models.JSONField(default=list) 
+    
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='verde')
+    creado_por = models.ForeignKey(Perfil, on_delete=models.SET_NULL, null=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.estado})"

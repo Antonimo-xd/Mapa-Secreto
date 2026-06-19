@@ -1,13 +1,11 @@
-from rest_framework import viewsets
-from .models import Categoria, Tienda
-from .serializers import CategoriaSerializer, TiendaSerializer
+from rest_framework import viewsets, permissions
+from .models import Categoria, Tienda, RutaExploracion
+from .serializers import CategoriaSerializer, TiendaSerializer, RutaExploracionSerializer
 
-class CategoriaViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Endpoint para ver las categorías (Solo lectura para visitantes).
-    """
+class CategoriaViewSet(viewsets.ModelViewSet): # <--- CAMBIO AQUI
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 class TiendaViewSet(viewsets.ModelViewSet):
     """
@@ -15,6 +13,7 @@ class TiendaViewSet(viewsets.ModelViewSet):
     Filtra por defecto las que están verificadas para el mapa principal.
     """
     serializer_class = TiendaSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         queryset = Tienda.objects.all()
@@ -25,6 +24,17 @@ class TiendaViewSet(viewsets.ModelViewSet):
         # Opcional: Filtrar por categoría desde la URL (?categoria=id)
         categoria_id = self.request.query_params.get('categoria')
         if categoria_id:
-            queryset = queryset.filter(categoria_id=categoria_id)
+            queryset = queryset.filter(categorias__id=categoria_id)
             
         return queryset
+    
+    def perform_create(self, serializer):
+        # Inyecta el usuario que está haciendo la petición y la marca como verificada
+        serializer.save(
+            creado_por=self.request.user.perfil,
+            verificado=True
+        )
+
+class RutaExploracionViewSet(viewsets.ModelViewSet):
+    queryset = RutaExploracion.objects.all()
+    serializer_class = RutaExploracionSerializer

@@ -13,11 +13,16 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 admin
 demo123
 .\venv\Scripts\activate
+python manage.py runserver
+npx cloudflared tunnel --url http://localhost:8000
+npm run dev
+npx cloudflared tunnel --url http://localhost:5173
 """
 
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,8 +38,9 @@ SECRET_KEY = 'django-insecure-%mj3%hw^t^z%t!q-+=0bw@ypi=-tpb!*&6t)$tm178t0%idsd3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Application definition
 
@@ -141,3 +147,22 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", 
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly', # <--- CLAVE
+    ),
+}
+
+# Configuración opcional de JWT (Vida útil del token)
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
