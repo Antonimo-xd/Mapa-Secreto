@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
+import imageCompression from 'browser-image-compression';
+import { agregarAColaOffline } from '../utils/offlineQueue';
 
 const CrearTiendaModal = ({ isOpen, onClose, categorias, latitud, longitud, token, onTiendaCreada, tiendaAEditar }) => {
   const [formData, setFormData] = useState({
@@ -122,7 +124,7 @@ const CrearTiendaModal = ({ isOpen, onClose, categorias, latitud, longitud, toke
 
     // Si el usuario seleccionó un archivo de foto, lo metemos al sobre
     if (formData.imagenArchivo) {
-      dataToSend.append('imagen', formData.imagenArchivo);
+      dataToSend.append('imagen', formData.imagenArchivo, formData.imagenArchivo.name || 'imagen_comprimida.jpg');
     }
 
     // Configuración especial para enviar archivos
@@ -139,10 +141,43 @@ const CrearTiendaModal = ({ isOpen, onClose, categorias, latitud, longitud, toke
       onTiendaCreada(); 
       onClose();
     } catch (error) {
-      console.error(error);
-      alert("Error al guardar.");
+      if (!navigator.onLine || error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+        const metodo = tiendaAEditar ? 'PUT' : 'POST';
+        const url = tiendaAEditar ? `${API_URL}/api/tiendas/${tiendaAEditar.id}/` : `${API_URL}/api/tiendas/`;
+        
+        await agregarAColaOffline(url, metodo, dataToSend, config.headers, true);
+        alert("Sin conexión: El lugar se ha guardado en la memoria de tu celular. Se sincronizará automáticamente cuando vuelva el internet.");
+        
+        onTiendaCreada(); // Para refrescar la UI (y el contador de tareas en App.jsx)
+        onClose();
+      } else {
+        console.error(error);
+        const detalles = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+        alert(`Error al guardar:\n${detalles}`);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const imageFile = e.target.files[0];
+    if (!imageFile) return;
+
+    const options = {
+      maxSizeMB: 0.2, // Máximo 200 KB
+      maxWidthOrHeight: 1024, // Para mantener buena calidad en celulares
+      useWebWorker: true,
+    };
+
+    try {
+      // Comprimimos mágicamente usando los núcleos del dispositivo
+      const compressedFile = await imageCompression(imageFile, options);
+      setFormData({...formData, imagenArchivo: compressedFile});
+      console.log(`Foto comprimida: de ${(imageFile.size/1024/1024).toFixed(2)} MB a ${(compressedFile.size/1024/1024).toFixed(2)} MB`);
+    } catch (error) {
+      console.error("Error al comprimir la imagen:", error);
+      setFormData({...formData, imagenArchivo: imageFile}); // Fallback
     }
   };
 
@@ -251,7 +286,7 @@ const CrearTiendaModal = ({ isOpen, onClose, categorias, latitud, longitud, toke
                   <input 
                     type="file" accept="image/*" 
                     className="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer bg-white border border-indigo-100 rounded-lg"
-                    onChange={e => setFormData({...formData, imagenArchivo: e.target.files[0]})} 
+                    onChange={handleImageUpload} 
                   />
                 </div>
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import * as turf from '@turf/turf';
 
-const AdminDashboard = ({ isOpen, onClose, tiendas }) => {
+const AdminDashboard = ({ isOpen, onClose, tiendas, rutas = [] }) => {
   if (!isOpen) return null;
 
   // COLORES MODERNOS PARA LOS GRÁFICOS
@@ -34,6 +35,29 @@ const AdminDashboard = ({ isOpen, onClose, tiendas }) => {
       if (t.verificado) totalVerificadas += 1;
     });
 
+    // 3. Procesar Rutas y Kilómetros con Turf.js
+    let totalKilometros = 0;
+    let rutasCompletadas = 0;
+
+    rutas.forEach(ruta => {
+      if (ruta.estado === 'verde') rutasCompletadas += 1;
+
+      if (ruta.coordenadas && ruta.coordenadas.length > 1) {
+        try {
+          // Leaflet/Django usan [Latitud, Longitud]
+          // Turf.js exige el formato GeoJSON estándar: [Longitud, Latitud]
+          const coordsParaTurf = ruta.coordenadas.map(p => [p[1], p[0]]);
+          const linea = turf.lineString(coordsParaTurf);
+          
+          // Calcula la longitud real usando la curvatura de la Tierra
+          const longitudEnKm = turf.length(linea, { units: 'kilometers' });
+          totalKilometros += longitudEnKm;
+        } catch(e) {
+          console.warn("No se pudo calcular la longitud de la ruta", ruta.nombre, e);
+        }
+      }
+    });
+
     // Formatear para Recharts
     const datosCategorias = Object.keys(conteoCategorias)
       .map(nombre => ({ name: nombre, cantidad: conteoCategorias[nombre] }))
@@ -44,8 +68,15 @@ const AdminDashboard = ({ isOpen, onClose, tiendas }) => {
       cantidad: conteoPrecios[nombre]
     }));
 
-    return { datosCategorias, datosPrecios, totalTiendas: tiendas.length, totalVerificadas };
-  }, [tiendas]);
+    return { 
+      datosCategorias, 
+      datosPrecios, 
+      totalTiendas: tiendas.length, 
+      totalVerificadas,
+      totalKilometros: totalKilometros.toFixed(2), // Redondear a 2 decimales
+      rutasCompletadas
+    };
+  }, [tiendas, rutas]);
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[3000] p-4 backdrop-blur-sm">
@@ -68,28 +99,48 @@ const AdminDashboard = ({ isOpen, onClose, tiendas }) => {
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           
           {/* TARJETAS DE RESUMEN (Kpis) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between border-l-4 border-l-blue-500">
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Lugares</p>
-                <h3 className="text-3xl font-black text-slate-800">{metricas.totalTiendas}</h3>
+                <h3 className="text-2xl lg:text-3xl font-black text-slate-800">{metricas.totalTiendas}</h3>
               </div>
-              <div className="text-4xl">📍</div>
+              <div className="text-3xl lg:text-4xl">📍</div>
             </div>
+
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between border-l-4 border-l-green-500">
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Verificadas y Activas</p>
-                <h3 className="text-3xl font-black text-slate-800">{metricas.totalVerificadas}</h3>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Activas</p>
+                <h3 className="text-2xl lg:text-3xl font-black text-slate-800">{metricas.totalVerificadas}</h3>
               </div>
-              <div className="text-4xl">✅</div>
+              <div className="text-3xl lg:text-4xl">✅</div>
             </div>
+
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between border-l-4 border-l-purple-500">
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Categorías Creadas</p>
-                <h3 className="text-3xl font-black text-slate-800">{metricas.datosCategorias.length}</h3>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Categorías</p>
+                <h3 className="text-2xl lg:text-3xl font-black text-slate-800">{metricas.datosCategorias.length}</h3>
               </div>
-              <div className="text-4xl">🏷️</div>
+              <div className="text-3xl lg:text-4xl">🏷️</div>
             </div>
+
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between border-l-4 border-l-orange-500">
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Km Explorados</p>
+                <h3 className="text-2xl lg:text-3xl font-black text-slate-800">{metricas.totalKilometros} <span className="text-sm">km</span></h3>
+              </div>
+              <div className="text-3xl lg:text-4xl">🏃‍♂️</div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between border-l-4 border-l-emerald-500">
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rutas Completas</p>
+                <h3 className="text-2xl lg:text-3xl font-black text-slate-800">{metricas.rutasCompletadas}</h3>
+              </div>
+              <div className="text-3xl lg:text-4xl">🗺️</div>
+            </div>
+
           </div>
 
           {/* GRÁFICOS */}

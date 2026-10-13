@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, CircleMarker, Polyline} from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
@@ -145,15 +145,7 @@ function SelectorUbicacion({ setCoordsSeleccionadas, token }) {
   return null;
 }
 
-// 4. Detector de Movimiento
-function DetectorMovimiento({ setCentro }) {
-  useMapEvents({
-    moveend: (e) => {
-      setCentro(e.target.getCenter());
-    },
-  });
-  return null;
-}
+// Detector de Movimiento eliminado para mejorar rendimiento y evitar bucles.
 
 // 5. Piloto Automático (Vuela a la tienda seleccionada)
 function VueloATienda({ tiendaEnfocada }) {
@@ -186,16 +178,77 @@ function EventosDibujo({ isDrawing, setRutaActual }) {
   return null;
 }
 
-// === COMPONENTE PRINCIPAL ===
-const Mapa = ({ tiendas, categorias, setCentro, token, onTiendaEliminada, setCoordsSeleccionadas, coordsSeleccionadas, onEditar, setMiUbicacion, tiendaEnfocada, rutaActual, rutas, onRutaEliminada, isDrawing, setRutaActual, mostrarRutas, onCambiarEstadoRuta}) => {
-  const posicionLaSerena = [-29.9027, -71.2520];
-  const marcadoresRef = useRef({});
+// 7. Capa de Mapa de Calor (Heatmap)
+function CapaHeatmap({ tiendas, modoTermico }) {
+  const map = useMap();
+  const heatLayerRef = useRef(null);
 
   useEffect(() => {
-    if (tiendaEnfocada && marcadoresRef.current[tiendaEnfocada.id]) {
-      marcadoresRef.current[tiendaEnfocada.id].openPopup();
+    if (!modoTermico) {
+      if (heatLayerRef.current) {
+        map.removeLayer(heatLayerRef.current);
+        heatLayerRef.current = null;
+      }
+      return;
     }
-  }, [tiendaEnfocada]);
+
+    const initHeatmap = async () => {
+      try {
+        if (!L.heatLayer) {
+          window.L = L; 
+          await import('leaflet.heat');
+        }
+
+        const puntosHeatmap = tiendas
+          .filter(t => !isNaN(parseFloat(t.latitud)) && !isNaN(parseFloat(t.longitud)))
+          .map(t => [parseFloat(t.latitud), parseFloat(t.longitud), 1]); 
+
+        if (puntosHeatmap.length > 0) {
+          heatLayerRef.current = L.heatLayer(puntosHeatmap, {
+            radius: 35,
+            blur: 25,
+            maxZoom: 16,
+            gradient: { 0.4: 'blue', 0.6: 'cyan', 0.7: 'lime', 0.8: 'yellow', 1.0: 'red' }
+          }).addTo(map);
+        }
+      } catch (error) {
+        console.error("Error cargando leaflet.heat:", error);
+      }
+    };
+
+    initHeatmap();
+
+    return () => {
+      if (heatLayerRef.current) {
+        map.removeLayer(heatLayerRef.current);
+        heatLayerRef.current = null;
+      }
+    };
+  }, [modoTermico, map, tiendas]);
+
+  return null;
+}
+
+// === COMPONENTE PRINCIPAL ===
+const POSICION_LA_SERENA = [-29.9027, -71.2520];
+
+const Mapa = ({ tiendas, categorias, setCentro, token, onTiendaEliminada, setCoordsSeleccionadas, coordsSeleccionadas, onEditar, setMiUbicacion, tiendaEnfocada, rutaActual, rutas, onRutaEliminada, isDrawing, setRutaActual, mostrarRutas, onCambiarEstadoRuta, modoTermico, urlMapa }) => {
+  const marcadoresRef = useRef({});
+
+  // Leaflet Popup automations removed since we now show details in the Sidebar/BottomSheet
+
+  const handleEliminar = async (id) => {
+    if (!window.confirm("¿Seguro que deseas eliminar esta tienda permanentemente?")) return;
+    try {
+      await axios.delete(`${API_URL}/api/tiendas/${id}/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (onTiendaEliminada) onTiendaEliminada();
+    } catch (error) {
+      console.error("Error al eliminar tienda", error);
+      alert("Hubo un error al eliminar. Revisa tu conexión o sesión.");
+    }
+  };
 
   const obtenerIcono = (tienda) => {
     // 1. Buscamos si la tienda tiene categorías
@@ -226,27 +279,17 @@ const Mapa = ({ tiendas, categorias, setCentro, token, onTiendaEliminada, setCoo
     className: 'marker-selection'
   });
 
-  const handleEliminar = async (id) => {
-    if (window.confirm("¿Estás seguro de eliminar esta tienda?")) {
-      try {
-        await axios.delete(`${API_URL}/api/tiendas/${id}/`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        onTiendaEliminada(); 
-      } catch (error) {
-        alert("Error al eliminar tienda");
-      }
-    }
-  };
 
   return (
-    <MapContainer center={posicionLaSerena} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-      <TileLayer maxZoom={20} url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+    <MapContainer center={POSICION_LA_SERENA} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+      <TileLayer 
+        maxZoom={19} 
+        url={urlMapa || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"} 
+      />
       
       <Localizador setMiUbicacion={setMiUbicacion} />
       <ControladorMapa tiendas={tiendas} />
       <SelectorUbicacion setCoordsSeleccionadas={setCoordsSeleccionadas} token={token} />
-      <DetectorMovimiento setCentro={setCentro} />
       <VueloATienda tiendaEnfocada={tiendaEnfocada} />
       <EventosDibujo isDrawing={isDrawing} setRutaActual={setRutaActual} />
       {/* 👇 LÍNEA ROJA EN VIVO (Mientras caminas) 👇 */}
@@ -327,149 +370,42 @@ const Mapa = ({ tiendas, categorias, setCentro, token, onTiendaEliminada, setCoo
         </Marker>
       )}
 
-      <MarkerClusterGroup 
-        chunkedLoading={true} // Mejora el rendimiento si hay cientos de tiendas
-        maxClusterRadius={40} // Aumentamos un poquito el radio para que agrupe mejo
-        spiderfyOnMaxZoom={true} // Activa el efecto "telaraña" si comparten coordenada exacta
-        iconCreateFunction={crearIconoCluster}
-      >
+      {/* Capa de Mapa de Calor */}
+      <CapaHeatmap tiendas={tiendas} modoTermico={modoTermico} />
 
-      {/* Tiendas Existentes */}
-      {tiendas.map(tienda => {
-        const lat = parseFloat(tienda.latitud);
-        const lng = parseFloat(tienda.longitud);
-
-        // 2. Validación
-        if (isNaN(lat) || isNaN(lng)) return null; 
-
-        // 3. Renderizado
-        return (
-          <Marker 
-            key={tienda.id} 
-            position={[lat, lng]} 
-            icon={obtenerIcono(tienda)}
-            ref={(m) => { marcadoresRef.current[tienda.id] = m; }}
+      {/* Solo mostramos los pines si NO estamos en Modo Térmico */}
+      {useMemo(() => (
+        !modoTermico && (
+          <MarkerClusterGroup 
+            chunkedLoading={true}
+            maxClusterRadius={40}
+            spiderfyOnMaxZoom={true}
+            iconCreateFunction={crearIconoCluster}
           >
-            <Popup className="enriched-popup">
-              <div className="w-64 font-sans p-1">
-                
-                {/* 1. IMAGEN DE LA TIENDA */}
-                {tienda.url_imagen && (
-                  <img 
-                    src={tienda.imagen ? tienda.imagen : tienda.url_imagen}
-                    alt={tienda.nombre} 
-                    className="w-full h-32 object-cover rounded-xl mb-3 shadow-sm border border-gray-100"
-                    onError={(e) => e.target.style.display = 'none'} // Oculta si el link está roto
-                  />
-                )}
+          {tiendas.map(tienda => {
+            const lat = parseFloat(tienda.latitud);
+            const lng = parseFloat(tienda.longitud);
 
-                {/* 2. ENCABEZADO (Nombre y Precio) */}
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-black text-lg text-gray-800 leading-tight">
-                    {tienda.nombre}
-                  </h3>
-                  <span className="text-green-600 font-black text-sm shrink-0 bg-green-50 px-2 rounded-full">
-                    {'$'.repeat(tienda.rango_precios || 1)}
-                  </span>
-                </div>
+            if (isNaN(lat) || isNaN(lng)) return null; 
 
-                {/* 3. CATEGORÍAS (Etiquetas de colores) */}
-                {tienda.categorias_detalle && tienda.categorias_detalle.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {tienda.categorias_detalle.map(cat => (
-                      <span 
-                        key={cat.id} 
-                        className="text-[10px] px-2 py-0.5 rounded-full text-white font-bold shadow-sm"
-                        style={{ backgroundColor: cat.color_hex }}
-                      >
-                        {cat.nombre}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* 4. DIRECCIÓN Y HORARIO */}
-                <div className="text-xs text-gray-600 mb-3 space-y-1.5 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                  {tienda.direccion && (
-                    <p className="flex items-start gap-1">
-                      <span className="shrink-0">📍</span> 
-                      <span>{tienda.direccion}</span>
-                    </p>
-                  )}
-                  {tienda.horarios?.general && (
-                    <p className="flex items-start gap-1">
-                      <span className="shrink-0">🕒</span> 
-                      <span>{tienda.horarios.general}</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* 5. DESCRIPCIÓN */}
-                {tienda.descripcion && (
-                  <p className="text-xs text-gray-500 italic mb-3 border-l-2 border-blue-200 pl-2">
-                    "{tienda.descripcion}"
-                  </p>
-                )}
-
-                {/* 6. CONTACTO (Botones de Redes Sociales) */}
-                {(tienda.contacto?.ig || tienda.contacto?.whatsapp || tienda.contacto?.web) && (
-                  <div className="flex gap-2 mb-3 flex-wrap">
-                    {tienda.contacto.ig && (
-                      <a 
-                        href={`https://instagram.com/${tienda.contacto.ig.replace('@', '')}`} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="flex-1 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 text-white text-[11px] py-2 rounded-lg font-bold text-center shadow hover:scale-105 transition-transform"
-                      >
-                        📸 Instagram
-                      </a>
-                    )}
-                    {tienda.contacto.whatsapp && (
-                      <a 
-                        href={`https://wa.me/${tienda.contacto.whatsapp.replace('+', '')}`} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="flex-1 bg-green-500 text-white text-[11px] py-2 rounded-lg font-bold text-center shadow hover:scale-105 transition-transform"
-                      >
-                        💬 WhatsApp
-                      </a>
-                    )}
-                    {tienda.contacto?.web && (
-                      <a 
-                        href={tienda.contacto.web.startsWith('http') ? tienda.contacto.web : `https://${tienda.contacto.web}`} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="flex-1 min-w-[30%] bg-blue-500 text-white text-[11px] py-2 rounded-lg font-bold text-center shadow hover:scale-105 transition-transform"
-                      >
-                        🌐 Web
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {/* 7. BOTONES DE ADMINISTRADOR (Ocultos para usuarios normales) */}
-                {token && (
-                  <div className="flex gap-2 pt-3 border-t border-gray-200">
-                      <button 
-                        onClick={() => onEditar(tienda)} 
-                        className="flex-1 bg-orange-50 text-orange-600 border border-orange-200 text-xs font-bold py-1.5 rounded-lg hover:bg-orange-100 transition-colors"
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button 
-                        onClick={() => handleEliminar(tienda.id)}
-                        className="flex-1 bg-red-50 text-red-600 border border-red-200 text-xs font-bold py-1.5 rounded-lg hover:bg-red-100 transition-colors"
-                      >
-                        🗑️ Borrar
-                      </button>
-                  </div>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
-      </MarkerClusterGroup>
+            return (
+              <Marker 
+                key={tienda.id} 
+                position={[lat, lng]} 
+                icon={obtenerIcono(tienda)}
+                ref={(m) => { marcadoresRef.current[tienda.id] = m; }}
+                eventHandlers={{
+                  click: () => {
+                    if (onMarkerClick) onMarkerClick(tienda);
+                  }
+                }}
+              />
+            );
+          })}
+          </MarkerClusterGroup>
+        )
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      ), [tiendas, token, modoTermico])}
     </MapContainer>
   );
 };

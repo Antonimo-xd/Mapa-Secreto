@@ -1,9 +1,3 @@
-// Detectamos desde dónde estás abriendo la app
-const hostActual = window.location.hostname;
-const esLocal = hostActual === 'localhost' || hostActual === '127.0.0.1';
-
-// Configuramos la URL dinámicamente
-export const API_URL = esLocal 
-  ? 'http://127.0.0.1:8000' 
-  // 👇 ASEGÚRATE DE QUE ESTE SEA TU ENLACE ACTUAL DE CLOUDFLARE PARA EL PUERTO 8000 👇
-  : 'https://francis-enter-forget-rangers.trycloudflare.com';
+// Detecta automáticamente si estás entrando desde localhost, Tailscale o tu IP estática (192.168.100.75)
+const hostname = window.location.hostname;
+export const API_URL = `http://${hostname}:8000`;

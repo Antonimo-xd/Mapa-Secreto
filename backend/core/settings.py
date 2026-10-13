@@ -12,11 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 admin
 demo123
-.\venv\Scripts\activate
-python manage.py runserver
-npx cloudflared tunnel --url http://localhost:8000
-npm run dev
-npx cloudflared tunnel --url http://localhost:5173
+docker compose up
 """
 
 import os
@@ -38,9 +34,11 @@ SECRET_KEY = 'django-insecure-%mj3%hw^t^z%t!q-+=0bw@ypi=-tpb!*&6t)$tm178t0%idsd3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Permite que Tailscale (o tu celular) se conecte
 ALLOWED_HOSTS = ['*']
 
 CORS_ALLOW_ALL_ORIGINS = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 

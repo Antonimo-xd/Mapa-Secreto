@@ -1,6 +1,22 @@
 @import "tailwindcss";
 @import 'leaflet/dist/leaflet.css';
 
+@layer base {
+  body {
+    font-family: 'Outfit', sans-serif;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
 /* Reseteo básico para asegurar que el mapa ocupe toda la pantalla */
 html, body, #root {
   height: 100%;
