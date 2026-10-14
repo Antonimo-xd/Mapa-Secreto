@@ -123,7 +123,7 @@ export const obtenerCantidadTareasPendientes = async () => {
   try {
     const keys = await offlineStorage.keys();
     return keys.length;
-  } catch (e) {
+  } catch {
     return 0;
   }
 };

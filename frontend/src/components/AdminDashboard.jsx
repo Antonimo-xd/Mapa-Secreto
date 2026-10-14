@@ -1,15 +1,24 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import * as turf from '@turf/turf';
 
-const AdminDashboard = ({ isOpen, onClose, tiendas, rutas = [] }) => {
-  if (!isOpen) return null;
+// COLORES MODERNOS PARA LOS GRÁFICOS
+const COLORES = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
 
-  // COLORES MODERNOS PARA LOS GRÁFICOS
-  const COLORES = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
-
-  // PROCESAMIENTO DE DATOS (Matemáticas en segundo plano)
+const AdminDashboard = ({ isOpen, onClose, tiendas = [], rutas = [] }) => {
+  // PROCESAMIENTO DE DATOS (Matemáticas en segundo plano) - Siempre invocado en el mismo orden
   const metricas = useMemo(() => {
+    // Si no está abierto, devolvemos métricas por defecto sin recalcular pesado
+    if (!isOpen) {
+      return {
+        datosCategorias: [],
+        datosPrecios: [],
+        totalTiendas: 0,
+        totalVerificadas: 0,
+        totalKilometros: "0.00",
+        rutasCompletadas: 0
+      };
+    }
     // 1. Tiendas por Categoría (Gráfico de Torta)
     const conteoCategorias = {};
     // 2. Tiendas por Rango de Precios (Gráfico de Barras)
@@ -76,7 +85,9 @@ const AdminDashboard = ({ isOpen, onClose, tiendas, rutas = [] }) => {
       totalKilometros: totalKilometros.toFixed(2), // Redondear a 2 decimales
       rutasCompletadas
     };
-  }, [tiendas, rutas]);
+  }, [tiendas, rutas, isOpen]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[3000] p-4 backdrop-blur-sm">

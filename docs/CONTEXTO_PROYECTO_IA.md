@@ -177,6 +177,7 @@ npm run dev -- --host
 2. **Dockerización en Windows:** Se crearon `backend/Dockerfile` y `frontend/Dockerfile` adaptados para Vite (`--host 0.0.0.0`) y montaje de volúmenes de código sin sobreescribir `node_modules`.
 3. **Datos no visibles en el Frontend:** Se identificó que las tiendas no verificadas estaban ocultas para usuarios no logueados por diseño en `TiendaViewSet`. Al iniciar sesión con las credenciales de admin, se desplegó la totalidad de los datos.
 4. **Espaciado y Layout Responsive:** Se corrigieron solapamientos entre la barra lateral colapsable en desktop y los controles flotantes en mobile.
+5. **Auditoría de Código y Calidad (React 19 & ESLint):** Corrección del evento `onMarkerClick` en `Mapa.jsx`, conexión del input de búsqueda en tiempo real con `tiendasVisibles` en `App.jsx`, reemplazo de URLs fijas por `API_URL` en `CrearCategoriaModal.jsx`, solución a la violación de reglas de hooks en `AdminDashboard.jsx`, y parametrización de variables de entorno en `settings.py`.
 
 ---
 

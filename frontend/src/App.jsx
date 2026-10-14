@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import axios from 'axios';
 import Mapa from './components/Mapa';
 import LoginModal from './components/LoginModal';
@@ -24,7 +24,7 @@ const obtenerTokenValido = () => {
       return null;
     }
     return token; 
-  } catch (error) {
+  } catch {
     localStorage.removeItem('access_token');
     return null;
   }
@@ -379,11 +379,22 @@ function App() {
 
   const tiendasVisibles = useMemo(() => {
     return tiendas.filter(t => {
-      if (filtrosCat.includes('NINGUNO')) return false; // Si está activo 'Ocultar'
-      if (filtrosCat.length === 0) return true; // Si está activo 'Todos'
-      return t.categorias_detalle && t.categorias_detalle.some(c => filtrosCat.includes(c.id));
+      // 1. Filtro por categoría
+      if (filtrosCat.includes('NINGUNO')) return false;
+      const pasaCategoria = filtrosCat.length === 0 || 
+        (t.categorias_detalle && t.categorias_detalle.some(c => filtrosCat.includes(c.id)));
+      if (!pasaCategoria) return false;
+
+      // 2. Filtro por búsqueda de texto (nombre, dirección, descripción)
+      if (!busqueda || !busqueda.trim()) return true;
+      const q = busqueda.toLowerCase().trim();
+      const coincideNombre = t.nombre && t.nombre.toLowerCase().includes(q);
+      const coincideDireccion = t.direccion && t.direccion.toLowerCase().includes(q);
+      const coincideDescripcion = t.descripcion && t.descripcion.toLowerCase().includes(q);
+
+      return coincideNombre || coincideDireccion || coincideDescripcion;
     });
-  }, [tiendas, filtrosCat]);
+  }, [tiendas, filtrosCat, busqueda]);
 
   const toggleFiltroCategoria = (id) => {
     setFiltrosCat(prev => {

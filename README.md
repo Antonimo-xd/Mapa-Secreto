@@ -16,48 +16,61 @@ Construida con un enfoque **Mobile-First**, la aplicación combina la fluidez de
 *   **📊 Dashboard de Administrador:** Un panel analítico con gráficos interactivos (`Recharts`) para visualizar la distribución de categorías, rangos de precios y métricas de exploración.
 *   **📡 Resiliencia de Red:** Adaptable de forma dinámica a entornos locales (`localhost`) o túneles de internet seguro (`Cloudflare`) de forma automática.
 
+*   **🎨 Multi-Tema Cartográfico:** Intercambia en vivo entre tres estéticas únicas (*Boutique*, *Cyberpunk* y *Aventura*) con azulejos optimizados de OpenStreetMap y ArcGIS World Topo.
+*   **🔥 Mapa de Calor (Heatmap):** Alterna a la vista térmica para identificar zonas con mayor densidad de comercios y locales secretos.
+*   **📶 Modo Offline-First:** Cola de sincronización local persistida en IndexedDB (`localforage`) que almacena acciones sin conexión y las sube automáticamente al recuperar internet.
+
 ---
 
 ## 🛠️ Stack Tecnológico
 
-El proyecto utiliza una arquitectura *Headless* (Desacoplada) para separar perfectamente la lógica de datos de la interfaz de usuario:
+El proyecto utiliza una arquitectura *Headless* (Desacoplada) y contenedorizada con Docker:
 
 ### Frontend
-- **Framework:** React 18 (Vite)
-- **Estilos:** Tailwind CSS (Estética moderna, utilería de clases)
-- **Mapas:** React-Leaflet + Leaflet MarkerCluster
+- **Framework:** React 19 + Vite 7
+- **Estilos:** Tailwind CSS v4 + Vanilla CSS dinámico
+- **Mapas:** React-Leaflet + Leaflet MarkerCluster + Leaflet Heat
 - **Matemáticas Geoespaciales:** Turf.js
-- **Gráficos:** Recharts
-- **PWA:** vite-plugin-pwa
+- **Gráficos & Métricas:** Recharts
+- **Offline & PWA:** `vite-plugin-pwa` + `localforage` (IndexedDB)
 
 ### Backend
-- **Framework:** Django 5 + Django REST Framework (Python)
+- **Framework:** Django 5.2 + Django REST Framework (Python 3.12)
 - **Base de Datos:** PostgreSQL (Vía Supabase)
-- **Autenticación:** JWT (JSON Web Tokens)
-- **Procesamiento de Imágenes:** Pillow + Client-Side Interceptors
+- **Autenticación:** SimpleJWT (JSON Web Tokens)
+- **Procesamiento de Imágenes:** Pillow + `browser-image-compression`
+
+### Infraestructura & DevOps
+- **Contenedores:** Docker & Docker Compose
+- **Túneles:** Cloudflare Tunnels (`cloudflared`)
 
 ---
 
 ## 🚀 Guía de Instalación Rápida
 
-Si deseas correr este proyecto en tu propia máquina, sigue estos pasos:
-
-### 1. Preparación del Backend (Django)
+### Opción Recomendada: Con Docker (1 solo comando)
 ```bash
-cd backend
-python -m venv venv
-# Activar entorno (Windows: venv\Scripts\activate | Mac/Linux: source venv/bin/activate)
-pip install -r requirements.txt
-python manage.py runserver
+# Iniciar backend y frontend simultáneamente
+docker compose up
 ```
+* **Frontend:** `http://localhost:5173`
+* **Backend API:** `http://localhost:8000`
+* **Django Admin:** `http://localhost:8000/admin`
 
-### 2. Preparación del Frontend (React)
-Abre otra terminal:
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Opción Alternativa: Ejecución Local Nativa
+1. **Backend (Django):**
+   ```bash
+   cd backend
+   .\venv\Scripts\activate
+   pip install -r requirements.txt
+   python manage.py runserver 0.0.0.0:8000
+   ```
+2. **Frontend (React):**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev -- --host
+   ```
 
 ---
 

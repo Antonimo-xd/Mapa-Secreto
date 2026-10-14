@@ -6,46 +6,43 @@ const GuardarRutaModal = ({ isOpen, onClose, onGuardar, cantidadPuntos, coordena
   const [datosNuevaRuta, setDatosNuevaRuta] = useState({ nombre: '', estado: 'verde' });
 
   // === MAGIA: GEOCODIFICACIÓN INVERSA ===
-  // Este useEffect se dispara automáticamente apenas el modal se abre
   useEffect(() => {
-    if (isOpen && coordenadaInicial) {
-      const obtenerNombreCalle = async () => {
-        try {
-          // 1. Ponemos un texto temporal para que sepas que está buscando
-          setDatosNuevaRuta(prev => ({ ...prev, nombre: 'Buscando nombre de la calle...' }));
-          
-          const [lat, lng] = coordenadaInicial;
-          
-          // 2. Le preguntamos a OpenStreetMap qué hay en esas coordenadas
-          const response = await axios.get(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
+    if (!isOpen || !coordenadaInicial) return;
 
-          // 3. Extraemos el nombre de la calle y la ciudad
-          if (response.data && response.data.address) {
-            const direccion = response.data.address;
-            // A veces es 'road' (calle), a veces 'pedestrian' (paseo peatonal), etc.
-            const calle = direccion.road || direccion.pedestrian || direccion.suburb || 'Calle Desconocida';
-            const ciudad = direccion.city || direccion.town || direccion.village || '';
-            
-            // Armamos un nombre bonito, ej: "Avenida del Mar, La Serena"
-            const nombreFinal = ciudad ? `${calle}, ${ciudad}` : calle;
-            
-            setDatosNuevaRuta(prev => ({ ...prev, nombre: nombreFinal }));
-          } else {
-            setDatosNuevaRuta(prev => ({ ...prev, nombre: 'Ruta Nueva' }));
-          }
-        } catch (error) {
-          console.error("Error buscando la calle:", error);
-          setDatosNuevaRuta(prev => ({ ...prev, nombre: '' })); // Si falla el internet, lo dejamos en blanco
+    let isMounted = true;
+    const obtenerNombreCalle = async () => {
+      try {
+        setDatosNuevaRuta(prev => ({ ...prev, nombre: 'Buscando nombre de la calle...' }));
+        
+        const [lat, lng] = coordenadaInicial;
+        const response = await axios.get(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        );
+
+        if (!isMounted) return;
+
+        if (response.data && response.data.address) {
+          const direccion = response.data.address;
+          const calle = direccion.road || direccion.pedestrian || direccion.suburb || 'Calle Desconocida';
+          const ciudad = direccion.city || direccion.town || direccion.village || '';
+          const nombreFinal = ciudad ? `${calle}, ${ciudad}` : calle;
+          
+          setDatosNuevaRuta(prev => ({ ...prev, nombre: nombreFinal }));
+        } else {
+          setDatosNuevaRuta(prev => ({ ...prev, nombre: 'Ruta Nueva' }));
         }
-      };
+      } catch (error) {
+        if (!isMounted) return;
+        console.error("Error buscando la calle:", error);
+        setDatosNuevaRuta(prev => ({ ...prev, nombre: '' }));
+      }
+    };
 
-      obtenerNombreCalle();
-    } else if (!isOpen) {
-      // Limpiamos los datos cuando el modal se cierra
-      setDatosNuevaRuta({ nombre: '', estado: 'verde' });
-    }
+    obtenerNombreCalle();
+
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen, coordenadaInicial]);
 
   if (!isOpen) return null;

@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
+
+// Colores predefinidos "bonitos" para sugerir
+const PALETA = [
+  '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', 
+  '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#64748B'
+];
 
 const CrearCategoriaModal = ({ isOpen, onClose, token, onCategoriaCreada, categoriaAEditar }) => {
   const [nombre, setNombre] = useState('');
   const [color, setColor] = useState('#3b82f6');
   const [loading, setLoading] = useState(false);
-
-  // Colores predefinidos "bonitos" para sugerir
-  const paleta = [
-    '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', 
-    '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#64748B'
-  ];
 
   // Función segura para cerrar
   const cerrarModal = () => {
@@ -31,7 +32,7 @@ const CrearCategoriaModal = ({ isOpen, onClose, token, onCategoriaCreada, catego
         } else {
           // MODO CREACIÓN: Limpiar y color random
           setNombre('');
-          setColor(paleta[Math.floor(Math.random() * paleta.length)]);
+          setColor(PALETA[Math.floor(Math.random() * PALETA.length)]);
         }
       }
     }, [isOpen, categoriaAEditar]);
@@ -51,12 +52,12 @@ const CrearCategoriaModal = ({ isOpen, onClose, token, onCategoriaCreada, catego
 
     try {
         if (categoriaAEditar) {
-          await axios.put(`http://127.0.0.1:8000/api/categorias/${categoriaAEditar.id}/`, datos, {
+          await axios.put(`${API_URL}/api/categorias/${categoriaAEditar.id}/`, datos, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           alert("¡Categoría actualizada!");
         } else {
-          await axios.post('http://127.0.0.1:8000/api/categorias/', datos, {
+          await axios.post(`${API_URL}/api/categorias/`, datos, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           alert("¡Categoría creada!");
@@ -82,7 +83,7 @@ const CrearCategoriaModal = ({ isOpen, onClose, token, onCategoriaCreada, catego
     if (confirmacion) {
       setLoading(true);
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/categorias/${categoriaAEditar.id}/`, {
+        await axios.delete(`${API_URL}/api/categorias/${categoriaAEditar.id}/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         alert("Categoría eliminada.");
@@ -131,7 +132,7 @@ const CrearCategoriaModal = ({ isOpen, onClose, token, onCategoriaCreada, catego
               <span className="text-xs font-mono text-gray-500">{color}</span>
             
               <div className="flex flex-wrap gap-2 ml-2">
-                {paleta.map(c => (
+                {PALETA.map(c => (
                   <button
                     key={c}
                     type="button"

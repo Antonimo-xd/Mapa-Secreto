@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, CircleMarker, Polyline} from 'react-leaflet';
 import L from 'leaflet';
-import axios from 'axios';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import { API_URL } from '../config';
 
 const crearIconoCluster = (cluster) => {
   const cantidad = cluster.getChildCount(); // Cuenta cuántas tiendas hay en este grupo
@@ -232,23 +230,26 @@ function CapaHeatmap({ tiendas, modoTermico }) {
 // === COMPONENTE PRINCIPAL ===
 const POSICION_LA_SERENA = [-29.9027, -71.2520];
 
-const Mapa = ({ tiendas, categorias, setCentro, token, onTiendaEliminada, setCoordsSeleccionadas, coordsSeleccionadas, onEditar, setMiUbicacion, tiendaEnfocada, rutaActual, rutas, onRutaEliminada, isDrawing, setRutaActual, mostrarRutas, onCambiarEstadoRuta, modoTermico, urlMapa }) => {
+const Mapa = ({ 
+  tiendas, 
+  categorias = [],
+  token, 
+  setCoordsSeleccionadas, 
+  coordsSeleccionadas, 
+  setMiUbicacion, 
+  tiendaEnfocada, 
+  rutaActual, 
+  rutas, 
+  onRutaEliminada, 
+  isDrawing, 
+  setRutaActual, 
+  mostrarRutas, 
+  onCambiarEstadoRuta, 
+  modoTermico, 
+  urlMapa,
+  onMarkerClick 
+}) => {
   const marcadoresRef = useRef({});
-
-  // Leaflet Popup automations removed since we now show details in the Sidebar/BottomSheet
-
-  const handleEliminar = async (id) => {
-    if (!window.confirm("¿Seguro que deseas eliminar esta tienda permanentemente?")) return;
-    try {
-      await axios.delete(`${API_URL}/api/tiendas/${id}/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (onTiendaEliminada) onTiendaEliminada();
-    } catch (error) {
-      console.error("Error al eliminar tienda", error);
-      alert("Hubo un error al eliminar. Revisa tu conexión o sesión.");
-    }
-  };
 
   const obtenerIcono = (tienda) => {
     // 1. Buscamos si la tienda tiene categorías
